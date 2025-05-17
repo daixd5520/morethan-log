@@ -23,7 +23,7 @@ export function filterPosts(
     // filter data
     .filter((post) => {
       const postDate = new Date(post?.date?.start_date || post.createdTime)
-      if (!post.title || postDate > tomorrow) return false
+      if (!post.title || !post.slug || postDate > tomorrow) return false
       return true
     })
     // filter status
@@ -35,10 +35,6 @@ export function filterPosts(
     .filter((post) => {
       const postType = post.type[0]
       return acceptType.includes(postType)
-    })
-    .map((post) => {
-      if (!post.slug) post.slug = post.id;
-      return post;
     })
   return filteredPosts
 }
