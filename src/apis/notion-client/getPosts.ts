@@ -33,20 +33,32 @@ export const getPosts = async () => {
     // Construct Data
     const pageIds = getAllPageIds(response)
 
-    // Parallel processing: fetch all page properties at once (reduces build time by 60-80%)
-    const data = await Promise.all(
-      pageIds.map(async (id) => {
-        const properties = (await getPageProperties(id, block, schema)) || null
-        // Add fullwidth, createdtime to properties
-        properties.createdTime = new Date(
-          block[id].value?.created_time
-        ).toString()
-        properties.fullWidth =
-          (block[id].value?.format as any)?.page_full_width ?? false
+    // Batch processing with concurrency control to avoid Notion API rate limits (429)
+    const BATCH_SIZE = 5 // Process 5 pages at a time to respect API limits
+    const data = []
 
-        return properties
-      })
-    )
+    for (let i = 0; i < pageIds.length; i += BATCH_SIZE) {
+      const batch = pageIds.slice(i, i + BATCH_SIZE)
+      const batchResults = await Promise.all(
+        batch.map(async (id) => {
+          const properties = (await getPageProperties(id, block, schema)) || null
+          // Add fullwidth, createdtime to properties
+          properties.createdTime = new Date(
+            block[id].value?.created_time
+          ).toString()
+          properties.fullWidth =
+            (block[id].value?.format as any)?.page_full_width ?? false
+
+          return properties
+        })
+      )
+      data.push(...batchResults)
+
+      // Add a small delay between batches to avoid rate limiting
+      if (i + BATCH_SIZE < pageIds.length) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+    }
 
     // Sort by date
     data.sort((a: any, b: any) => {

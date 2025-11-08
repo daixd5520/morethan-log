@@ -3,6 +3,30 @@ import { NotionAPI } from "notion-client"
 import { BlockMap, CollectionPropertySchemaMap } from "notion-types"
 import { customMapImageUrl } from "./customMapImageUrl"
 
+// Retry helper for handling rate limits
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 3,
+  delay = 1000
+): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn()
+    } catch (error: any) {
+      const isLastAttempt = i === retries - 1
+      const isRateLimit = error?.response?.statusCode === 429
+
+      if (isLastAttempt) {
+        throw error
+      }
+
+      const waitTime = isRateLimit ? delay * Math.pow(2, i) : delay
+      await new Promise(resolve => setTimeout(resolve, waitTime))
+    }
+  }
+  throw new Error("Should not reach here")
+}
+
 async function getPageProperties(
   id: string,
   block: BlockMap,
@@ -57,7 +81,8 @@ async function getPageProperties(
           for (let i = 0; i < rawUsers.length; i++) {
             if (rawUsers[i][0][1]) {
               const userId = rawUsers[i][0]
-              const res: any = await api.getUsers(userId)
+              // Add retry for user API calls to handle rate limits
+              const res: any = await withRetry(() => api.getUsers(userId))
               const resValue =
                 res?.recordMapWithRoles?.notion_user?.[userId[1]]?.value
               const user = {
