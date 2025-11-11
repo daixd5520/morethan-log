@@ -6,6 +6,7 @@ import {
   AiOutlineInstagram,
   AiOutlineMail,
 } from "react-icons/ai"
+import { FaRss } from "react-icons/fa"
 import { CONFIG } from "site.config"
 import { Emoji } from "src/components/Emoji"
 
@@ -13,9 +14,18 @@ const ContactCard: React.FC = () => {
   return (
     <>
       <StyledTitle>
-        <Emoji>💬</Emoji> Contact
+        <Emoji>🔗</Emoji> Links / Contact
       </StyledTitle>
       <StyledWrapper>
+        <a
+          href="/feed"
+          rel="noreferrer"
+          target="_blank"
+          className="rss-link"
+        >
+          <FaRss className="icon" />
+          <div className="name">RSS 订阅</div>
+        </a>
         {CONFIG.profile.github && (
           <a
             href={`https://github.com/${CONFIG.profile.github}`}
@@ -95,6 +105,18 @@ const StyledWrapper = styled.div`
     .name {
       font-size: 0.875rem;
       line-height: 1.25rem;
+    }
+  }
+  a.rss-link {
+    font-weight: 600;
+    color: ${({ theme }) => (theme.scheme === "light" ? "#f26522" : "#ff8c42")};
+    background-color: ${({ theme }) =>
+      theme.scheme === "light" ? "#fff4ed" : theme.colors.gray5};
+
+    :hover {
+      color: ${({ theme }) => (theme.scheme === "light" ? "#d94d18" : "#ffa366")};
+      background-color: ${({ theme }) =>
+        theme.scheme === "light" ? "#ffe8d9" : theme.colors.gray6};
     }
   }
 `
