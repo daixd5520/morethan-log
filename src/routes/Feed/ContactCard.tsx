@@ -18,7 +18,7 @@ const ContactCard: React.FC = () => {
       </StyledTitle>
       <StyledWrapper>
         <a
-          href="/feed"
+          href="/api/feed"
           rel="noreferrer"
           target="_blank"
           className="rss-link"
