@@ -17,11 +17,13 @@ export const getPosts = async () => {
 
   const response = await api.getPage(id)
   id = idToUuid(id)
-  const collection = Object.values(response.collection)[0]?.value
+  const collectionValue = Object.values(response.collection)[0]?.value as any
+  const collection = collectionValue?.value ?? collectionValue
   const block = response.block
   const schema = collection?.schema
 
-  const rawMetadata = block[id].value
+  const blockValue = (block[id].value as any)?.value ?? block[id].value
+  const rawMetadata = blockValue
 
   // Check Type
   if (
@@ -36,28 +38,18 @@ export const getPosts = async () => {
     // Batch processing with concurrency control to avoid Notion API rate limits (429)
     const BATCH_SIZE = 5 // Process 5 pages at a time to respect API limits
     const data = []
+    for (let i = 0; i < pageIds.length; i++) {
+      const id = pageIds[i]
+      const properties = (await getPageProperties(id, block, schema)) || null
+      // Add fullwidth, createdtime to properties
+      const pageBlockValue = (block[id].value as any)?.value ?? block[id].value
+      properties.createdTime = new Date(
+        pageBlockValue?.created_time
+      ).toString()
+      properties.fullWidth =
+        (pageBlockValue?.format as any)?.page_full_width ?? false
 
-    for (let i = 0; i < pageIds.length; i += BATCH_SIZE) {
-      const batch = pageIds.slice(i, i + BATCH_SIZE)
-      const batchResults = await Promise.all(
-        batch.map(async (id) => {
-          const properties = (await getPageProperties(id, block, schema)) || null
-          // Add fullwidth, createdtime to properties
-          properties.createdTime = new Date(
-            block[id].value?.created_time
-          ).toString()
-          properties.fullWidth =
-            (block[id].value?.format as any)?.page_full_width ?? false
-
-          return properties
-        })
-      )
-      data.push(...batchResults)
-
-      // Add a small delay between batches to avoid rate limiting
-      if (i + BATCH_SIZE < pageIds.length) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-      }
+      data.push(properties)
     }
 
     // Sort by date
